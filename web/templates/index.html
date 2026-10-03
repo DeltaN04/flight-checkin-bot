@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flight Auto Check-in Agent</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:900px;margin:24px auto;padding:0 16px;color:#111}
+.card{border:1px solid #ddd;border-radius:12px;padding:16px;margin:12px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;background:#eee}
+.done{background:#d7f5df}.retry{background:#ffe3c2}.scheduled{background:#ddeaff}.awaiting_payment{background:#f3d9ff}.in_progress{background:#fff3bf}
+input,select{padding:8px;margin:4px;border:1px solid #ccc;border-radius:8px}
+button{padding:9px 14px;border-radius:8px;border:0;background:#111;color:#fff;cursor:pointer}
+button.secondary{background:#eee;color:#111}
+</style>
+</head>
+<body>
+<h1>✈️ Flight Auto Check-in Agent</h1>
+<p>Share your ticket <b>any time</b> — agent auto check-ins at <b>T-48h</b>, picks your <b>seat + meal</b>, then stops at the <b>payment page</b> for you to pay. Supports IndiGo, Air India, SpiceJet, Akasa, Air India Express.</p>
+
+<div class="card">
+<h3>0. My preferences (seat + meal)</h3>
+<form action="/api/preferences" method="post">
+<label>Seat <select name="seat_type">
+<option value="">—</option>
+<option value="window" {% if prefs.seat_type=='window' %}selected{% endif %}>Window</option>
+<option value="aisle" {% if prefs.seat_type=='aisle' %}selected{% endif %}>Aisle</option>
+<option value="middle" {% if prefs.seat_type=='middle' %}selected{% endif %}>Middle</option>
+<option value="any" {% if prefs.seat_type=='any' %}selected{% endif %}>Any</option>
+</select></label>
+<label>Zone <select name="seat_zone">
+<option value="">—</option>
+<option value="front" {% if prefs.seat_zone=='front' %}selected{% endif %}>Front</option>
+<option value="middle" {% if prefs.seat_zone=='middle' %}selected{% endif %}>Middle</option>
+<option value="back" {% if prefs.seat_zone=='back' %}selected{% endif %}>Back</option>
+<option value="any" {% if prefs.seat_zone=='any' %}selected{% endif %}>Any</option>
+</select></label>
+<input name="preferred_seat" placeholder="Exact seat (e.g. 14A)" value="{{prefs.preferred_seat}}">
+<input name="max_seat_price_inr" placeholder="Max seat ₹" value="{{prefs.max_seat_price_inr}}">
+<label>Meal <select name="meal_pref">
+<option value="veg" {% if prefs.meal_pref=='veg' %}selected{% endif %}>Veg</option>
+<option value="nonveg" {% if prefs.meal_pref=='nonveg' %}selected{% endif %}>Non-veg</option>
+<option value="vegan" {% if prefs.meal_pref=='vegan' %}selected{% endif %}>Vegan</option>
+<option value="jain" {% if prefs.meal_pref=='jain' %}selected{% endif %}>Jain</option>
+<option value="any" {% if prefs.meal_pref=='any' %}selected{% endif %}>Any</option>
+<option value="none" {% if prefs.meal_pref=='none' %}selected{% endif %}>No meal</option>
+</select></label>
+<input name="preferred_meal" placeholder="Dish (e.g. paneer)" value="{{prefs.preferred_meal}}">
+<input name="max_meal_price_inr" placeholder="Max meal ₹" value="{{prefs.max_meal_price_inr}}">
+<br><input name="pref_text" placeholder='Or type: "window seat in front, veg paneer meal"' style="width:60%">
+<button type="submit">Save preferences</button>
+</form>
+<p><small>Current: {{prefs.seat_type}} seat / {{prefs.seat_zone}} + {{prefs.meal_pref}} meal. Agent never pays — it hands off at the payment page.</small></p>
+</div>
+
+<div class="card">
+<h3>1. Upload ticket (PDF)</h3>
+<form action="/api/bookings/upload" method="post" enctype="multipart/form-data">
+<input type="file" name="file" accept=".pdf,.txt" required>
+<button type="submit">Upload &amp; schedule</button>
+</form>
+<p><small>Tip: upload works best with text PDFs. Scanned image? Use manual entry below (or add Tesseract OCR).</small></p>
+</div>
+
+<div class="card">
+<h3>2. Manual entry (works always)</h3>
+<form action="/api/bookings/manual" method="post">
+<input name="pnr" placeholder="PNR (6 chars)" required maxlength="6">
+<input name="last_name" placeholder="Last name" required>
+<input name="first_name" placeholder="First name">
+<input name="airline_code" placeholder="Airline (6E/AI/SG/QP/IX)">
+<input name="flight_no" placeholder="Flight (e.g. 6E 2345)">
+<input name="origin" placeholder="From (DEL)" maxlength="3">
+<input name="destination" placeholder="To (BOM)" maxlength="3">
+<input name="departure_local" placeholder="Departure IST: YYYY-MM-DD HH:MM" required>
+<input name="email" placeholder="Email">
+<br><input name="preferred_seat" placeholder="Seat override (e.g. 14A)">
+<select name="seat_type"><option value="">Seat: default</option><option value="window">Window</option><option value="aisle">Aisle</option><option value="middle">Middle</option></select>
+<select name="meal_pref"><option value="">Meal: default</option><option value="veg">Veg</option><option value="nonveg">Non-veg</option><option value="vegan">Vegan</option><option value="jain">Jain</option><option value="none">No meal</option></select>
+<button type="submit">Schedule check-in</button>
+</form>
+</div>
+
+<div class="card">
+<h3>3. Gmail auto-import</h3>
+<form action="/api/gmail/scan" method="post">
+<button class="secondary" type="submit">Scan inbox for e-tickets</button>
+</form>
+<p><small>Needs <code>GMAIL_ENABLED=true</code> + <code>client_secret.json</code>. Or just forward tickets / upload above.</small></p>
+</div>
+
+<div class="card">
+<h3>Scheduled check-ins</h3>
+<form action="/api/run-due-now" method="post" style="margin-bottom:8px">
+<button class="secondary" type="submit">Run due check-ins now (test)</button>
+</form>
+<table>
+<tr><th>ID</th><th>PNR</th><th>Flight</th><th>Route</th><th>Departure (UTC)</th><th>Pax</th><th>WhatsApp</th><th>Seat/Meal</th><th>Status</th><th>Pay</th></tr>
+{% for b in bookings %}
+<tr>
+<td>{{b.id}}</td><td><b>{{b.pnr}}</b></td><td>{{b.airline_code}} {{b.flight_no}}</td>
+<td>{{b.origin}}→{{b.destination}}</td><td>{{b.departure_utc}}</td>
+<td>{{b.passenger_first_name}} {{b.passenger_last_name}}</td>
+<td>{{('+' + b.owner_phone) if b.owner_phone else '—'}}</td>
+<td>{{b.seat or '—'}} / {{b.meal or '—'}}</td>
+<td><span class="pill {{b.status}}">{{b.status}}</span></td>
+<td>{% if b.status=='awaiting_payment' %}<a href="{{b.payment_url}}" target="_blank">Pay ₹{{b.payment_amount_inr}}</a>{% else %}—{% endif %}</td>
+</tr>
+{% endfor %}
+</table>
+{% if not bookings %}<p>No bookings yet — upload a ticket above.</p>{% endif %}
+</div>
+</body>
+</html>

@@ -1,0 +1,11 @@
+services:
+  bot:
+    build: .
+    env_file: .env
+    environment:
+      DATA_DIR: /app/data
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "${PORT:-8001}:8001"
+    restart: unless-stopped

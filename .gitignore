@@ -1,0 +1,11 @@
+data/
+.venv/
+__pycache__/
+*.pyc
+.env
+client_secret.json
+token.json
+
+node_modules/
+wa-bridge/auth/
+wa-bridge/node_modules/
