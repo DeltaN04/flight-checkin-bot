@@ -9,10 +9,23 @@ LLM-powered agent that:
 
 > Reality check: Indian carriers have **no public check-in API**. This uses controlled browser automation against their public web check-in pages. CAPTCHA / OTP / seat-paywalls / schedule changes can block full-auto — so the agent retries and falls back to a "click-this-prefilled-link" notification.
 
+## How it works
+
+```mermaid
+flowchart LR
+  A[Ticket<br/>PDF · screenshot · Gmail · PNR] --> B[LLM parse<br/>+ regex fallback offline]
+  B --> C[Scheduler<br/>fires at T-48h]
+  C --> D[Playwright check-in<br/>per-airline adapters]
+  D --> E{Seat + meal<br/>free?}
+  E -->|yes| F[Checked in ✅<br/>Email / Telegram / WhatsApp]
+  E -->|payment needed| G[Stop at payment step 💳<br/>handoff link — never pays]
+  E -->|blocked| H[Prefilled manual link ✈️<br/>CAPTCHA / OTP / DOM change]
+```
+
 ## Quickstart
 
 ```bash
-cd flight-checkin-agent
+git clone https://github.com/DeltaN04/flight-checkin-bot && cd flight-checkin-bot
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 playwright install chromium   # for real browser check-in
